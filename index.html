@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mein Angebot</title>
+<style>
+  :root {
+    --bg: #f7f7f5; --card: #ffffff; --text: #1d1d1f; --muted: #6b6b70;
+    --accent: #1f7a4d; --accent-text: #ffffff; --border: #e3e3e0;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141416; --card: #1e1e21; --text: #f2f2f2; --muted: #a0a0a6;
+      --accent: #3fbf7f; --accent-text: #0b1f14; --border: #2e2e33;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text); line-height: 1.5;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 0 16px; }
+  header { padding: 48px 0 24px; }
+  h1 { font-size: clamp(1.8rem, 5vw, 2.6rem); margin: 0 0 8px; }
+  .lead { color: var(--muted); font-size: 1.1rem; margin: 0; }
+  h2 { margin: 40px 0 16px; }
+  .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 20px; display: flex; flex-direction: column; gap: 8px;
+  }
+  .card h3 { margin: 0; font-size: 1.15rem; }
+  .card p { margin: 0; color: var(--muted); flex: 1; }
+  .price { font-weight: 700; font-size: 1.2rem; }
+  button {
+    font: inherit; cursor: pointer; border: 0; border-radius: 8px; padding: 10px 14px;
+    background: var(--accent); color: var(--accent-text); font-weight: 600;
+  }
+  button.secondary { background: transparent; color: var(--text); border: 1px solid var(--border); }
+  .cart { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+  .cart-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border); }
+  .cart-row:last-of-type { border-bottom: 0; }
+  .qty { display: flex; align-items: center; gap: 6px; }
+  .qty button { padding: 2px 10px; }
+  .total { font-weight: 700; font-size: 1.2rem; margin-top: 12px; text-align: right; }
+  form { display: grid; gap: 12px; margin-top: 16px; }
+  label { display: grid; gap: 4px; font-weight: 600; }
+  input, textarea {
+    font: inherit; padding: 10px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--bg); color: var(--text);
+  }
+  .empty { color: var(--muted); }
+  .note { color: var(--muted); font-size: 0.9rem; }
+  footer { padding: 40px 0; color: var(--muted); font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1 id="title"></h1>
+    <p class="lead" id="tagline"></p>
+  </header>
+
+  <section>
+    <h2>Angebote</h2>
+    <div class="grid" id="products"></div>
+  </section>
+
+  <section>
+    <h2>Deine Anfrage</h2>
+    <div class="cart">
+      <div id="cart"></div>
+      <div class="total" id="total"></div>
+      <form id="order">
+        <label>Name <input name="name" required autocomplete="name"></label>
+        <label>Telefon oder E-Mail <input name="contact" required></label>
+        <label>Nachricht (Wunschtermin, Adresse, ...) <textarea name="msg" rows="3"></textarea></label>
+        <button type="submit">Anfrage per E-Mail senden</button>
+        <p class="note">Es wird nichts bezahlt. Dein E-Mail-Programm öffnet sich mit der fertigen Anfrage.</p>
+      </form>
+    </div>
+  </section>
+
+  <footer id="footer"></footer>
+</div>
+
+<script>
+// ============================================================
+//  HIER ANPASSEN: Name, E-Mail und deine Angebote
+// ============================================================
+const SHOP = {
+  title: "Sammys Service",
+  tagline: "Schnell, zuverlässig und günstig – aus der Nachbarschaft.",
+  email: "deine-email@example.com", // <- Deine echte E-Mail eintragen!
+  currency: "EUR",
+  products: [
+    { id: "rasen",    name: "Rasenmähen",          desc: "Bis 100 m², inkl. Schnittgut entsorgen.", price: 15 },
+    { id: "hund",     name: "Gassi gehen",         desc: "30 Minuten mit deinem Hund.",              price: 8 },
+    { id: "auto",     name: "Auto waschen",        desc: "Außenwäsche per Hand.",                     price: 12 },
+    { id: "nachhilfe",name: "Nachhilfe (60 Min.)", desc: "Mathe oder Englisch, bis Klasse 8.",         price: 12 },
+    { id: "einkauf",  name: "Einkaufshilfe",       desc: "Einkäufe erledigen und vorbeibringen.",     price: 7 },
+    { id: "pc",       name: "Handy/PC-Hilfe",      desc: "Einrichten, Apps installieren, erklären.",  price: 10 }
+  ]
+};
+// ============================================================
+
+const fmt = new Intl.NumberFormat("de-DE", { style: "currency", currency: SHOP.currency });
+const cart = {}; // id -> Anzahl
+
+function el(tag, props = {}, ...children) {
+  const e = Object.assign(document.createElement(tag), props);
+  children.forEach(c => e.append(c));
+  return e;
+}
+
+function renderProducts() {
+  const box = document.getElementById("products");
+  SHOP.products.forEach(p => {
+    const btn = el("button", { textContent: "Hinzufügen", onclick: () => { cart[p.id] = (cart[p.id] || 0) + 1; renderCart(); } });
+    box.append(el("div", { className: "card" },
+      el("h3", { textContent: p.name }),
+      el("p", { textContent: p.desc }),
+      el("div", { className: "price", textContent: fmt.format(p.price) }),
+      btn));
+  });
+}
+
+function cartItems() {
+  return SHOP.products.filter(p => cart[p.id] > 0).map(p => ({ ...p, qty: cart[p.id] }));
+}
+
+function renderCart() {
+  const box = document.getElementById("cart");
+  box.innerHTML = "";
+  const items = cartItems();
+  if (!items.length) {
+    box.append(el("p", { className: "empty", textContent: "Noch nichts ausgewählt." }));
+    document.getElementById("total").textContent = "";
+    return;
+  }
+  items.forEach(i => {
+    const change = d => { cart[i.id] = Math.max(0, cart[i.id] + d); renderCart(); };
+    box.append(el("div", { className: "cart-row" },
+      el("span", { textContent: i.name }),
+      el("div", { className: "qty" },
+        el("button", { className: "secondary", textContent: "−", type: "button", onclick: () => change(-1) }),
+        el("span", { textContent: i.qty }),
+        el("button", { className: "secondary", textContent: "+", type: "button", onclick: () => change(1) }),
+        el("span", { textContent: fmt.format(i.qty * i.price) }))));
+  });
+  const sum = items.reduce((s, i) => s + i.qty * i.price, 0);
+  document.getElementById("total").textContent = "Summe: " + fmt.format(sum);
+}
+
+document.getElementById("order").addEventListener("submit", e => {
+  e.preventDefault();
+  const items = cartItems();
+  if (!items.length) { alert("Bitte zuerst ein Angebot auswählen."); return; }
+  const f = new FormData(e.target);
+  const sum = items.reduce((s, i) => s + i.qty * i.price, 0);
+  const lines = items.map(i => `- ${i.qty}x ${i.name}: ${fmt.format(i.qty * i.price)}`);
+  const body = [
+    `Name: ${f.get("name")}`,
+    `Kontakt: ${f.get("contact")}`,
+    "", "Bestellung:", ...lines, `Summe: ${fmt.format(sum)}`,
+    "", "Nachricht:", f.get("msg") || "-"
+  ].join("\n");
+  location.href = `mailto:${SHOP.email}?subject=${encodeURIComponent("Anfrage: " + SHOP.title)}&body=${encodeURIComponent(body)}`;
+});
+
+document.title = SHOP.title;
+document.getElementById("title").textContent = SHOP.title;
+document.getElementById("tagline").textContent = SHOP.tagline;
+document.getElementById("footer").textContent = `© ${new Date().getFullYear()} ${SHOP.title}`;
+renderProducts();
+renderCart();
+</script>
+</body>
+</html>
