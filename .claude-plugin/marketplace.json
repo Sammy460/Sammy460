@@ -1,11 +1,21 @@
 {
   "name": "sammy460",
-  "owner": { "name": "Sammy460" },
+  "owner": {
+    "name": "Sammy460"
+  },
   "plugins": [
     {
       "name": "fitness-buddy",
       "source": "./fitness-buddy",
       "description": "Personal fitness buddy: workout plans, workout log, nutrition targets and daily check-ins."
+    },
+    {
+      "name": "video-watcher",
+      "source": "./video-watcher",
+      "description": "Lets Claude watch videos: keyframes via ffmpeg plus Whisper transcript."
     }
-  ]
+  ],
+  "metadata": {
+    "description": "Sammy460's Claude plugins: Fitness Buddy and Video Watcher."
+  }
 }

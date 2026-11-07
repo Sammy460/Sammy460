@@ -34,6 +34,10 @@ Claude Code:
 
 Cowork: install the packaged `fitness-buddy.plugin` file.
 
+## Works with
+
+Video Watcher (in this repo): share a workout video and Fitness Buddy can turn its exercises into a plan.
+
 ## Disclaimer
 
 Fitness Buddy gives general fitness and nutrition guidance, not medical advice. Check with a doctor before starting a new program, especially with injuries or health conditions.

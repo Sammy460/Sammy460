@@ -1,0 +1,7 @@
+{
+  "name": "video-watcher",
+  "version": "0.1.0",
+  "description": "Lets Claude watch a video: extracts keyframes with ffmpeg, transcribes speech with Whisper, and summarizes or reviews what happens.",
+  "author": { "name": "Sammy460" },
+  "keywords": ["video", "reels", "transcription", "ffmpeg", "whisper"]
+}
