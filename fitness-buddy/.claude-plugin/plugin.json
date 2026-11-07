@@ -1,0 +1,7 @@
+{
+  "name": "fitness-buddy",
+  "version": "0.1.0",
+  "description": "A personal fitness buddy: builds workout plans, logs sessions and PRs, sets nutrition targets, and runs daily check-ins with streaks.",
+  "author": { "name": "Sammy460" },
+  "keywords": ["fitness", "workout", "nutrition", "habits", "training-log"]
+}
