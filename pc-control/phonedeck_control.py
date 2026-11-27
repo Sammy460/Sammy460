@@ -37,7 +37,11 @@ PT_URL = "https://dl.google.com/android/repository/platform-tools-latest-windows
 
 # Server-Pfade auf diesen Ordner biegen
 server.CONFIG = APP_DIR / "deck.json"
-if getattr(sys, "frozen", False):
+# Eigener web-Ordner neben der EXE hat Vorrang (fuer eigene Anpassungen),
+# sonst der mitgebaute.
+if (APP_DIR / "web").exists():
+    server.WEB = APP_DIR / "web"
+elif getattr(sys, "frozen", False):
     server.WEB = Path(getattr(sys, "_MEIPASS", APP_DIR)) / "web"
 else:
     server.WEB = APP_DIR.parent / "pc-server" / "web"
@@ -148,20 +152,25 @@ def connect_phone():
         log("ADB nicht gefunden.")
         return False
     code, out = adb(adb_path, "devices")
-    serial = None
-    for line in out.splitlines()[1:]:
-        if "\tdevice" in line:
-            serial = line.split("\t")[0]
-            break
-    if not serial:
+    serials = [l.split("\t")[0] for l in out.splitlines()[1:] if "\tdevice" in l]
+    if not serials:
         log("Kein Handy per USB. USB-Debugging an?")
         return False
-    sel = ["-s", serial]
-    adb(adb_path, *sel, "reverse", "tcp:8765", "tcp:8765")
-    adb(adb_path, *sel, "shell", "am", "start", "-n", f"{PKG}/.MainActivity",
-        "--es", "host", "127.0.0.1", "--ei", "port", "8765")
-    log(f"Handy verbunden ({serial}).")
-    return True
+    done = False
+    for serial in serials:
+        sel = ["-s", serial]
+        # Nur Geraete mit installierter App ansprechen
+        _, has = adb(adb_path, *sel, "shell", "pm", "path", PKG)
+        if "package:" not in has:
+            continue
+        adb(adb_path, *sel, "reverse", "tcp:8765", "tcp:8765")
+        adb(adb_path, *sel, "shell", "am", "start", "-n", f"{PKG}/.MainActivity",
+            "--es", "host", "127.0.0.1", "--ei", "port", "8765")
+        log(f"Handy verbunden ({serial}).")
+        done = True
+    if not done:
+        log("App auf keinem Handy gefunden. PhoneDeck installiert?")
+    return done
 
 
 def connect_loop():

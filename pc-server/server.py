@@ -58,6 +58,13 @@ async def _now_playing_async():
         playing = int(info.playback_status) == 4  # 4 = Playing
     except Exception:  # noqa: BLE001
         pass
+    pos = dur = 0.0
+    try:
+        tl = s.get_timeline_properties()
+        pos = tl.position.duration / 1e7  # 100ns-Ticks -> Sekunden
+        dur = tl.end_time.duration / 1e7
+    except Exception:  # noqa: BLE001
+        pass
     thumb = ""
     try:
         if props.thumbnail is not None:
@@ -76,6 +83,8 @@ async def _now_playing_async():
         "artist": props.artist or "",
         "playing": playing,
         "thumb": thumb,
+        "pos": pos,
+        "dur": dur,
     }
 
 
