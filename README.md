@@ -8,6 +8,7 @@ Das Handy hängt per USB am PC und zeigt große Buttons (Apps starten, Media-Tas
 ```
 pc-server/   Python-Server für den PC (Buttons in deck.json)
 android/     Android-App (Kiosk-Vollbild, Strom-Wächter, Autostart)
+handy-tools/ Skripte fuer Auto-Boot beim Einstecken (Root/Magisk)
 ```
 
 ## 1. PC (Windows)
@@ -55,6 +56,25 @@ Ohne diese drei Punkte funktioniert der automatische Aus-/An-Zyklus nicht. Andro
 - Sonst einen anderen USB-Port probieren (oft liefern die hinteren Ports keinen Strom mehr).
 
 **Tipp:** Keine Bildschirmsperre (PIN/Muster) auf dem Handy setzen. Sonst wartet es nach dem Boot auf die Entsperrung.
+
+## Anleitung Redmi 9A (MIUI 12, Android 10)
+
+> ⚠️ Beim Entsperren des Bootloaders (Schritt 2) wird das Handy **komplett gelöscht**. Mach vorher ein Backup.
+
+1. **Vorbereiten:** Am Handy unter Einstellungen → Über das Telefon 7× auf „MIUI-Version“ tippen. Dann unter Zusätzliche Einstellungen → Entwickleroptionen „OEM-Entsperrung“ und „USB-Debugging“ einschalten. Unter „Mi-Entsperrstatus“ deinen Mi-Account verknüpfen (dafür muss die SIM aktiv sein).
+2. **Bootloader entsperren:** Das Handy im Fastboot-Modus starten (aus, dann Lautstärke runter + Power halten). Am PC das offizielle **Mi Unlock Tool** ausführen. Meist verlangt es eine Wartezeit von 168 Stunden. Danach das Tool erneut starten und entsperren.
+3. **Root mit Magisk:** Die Fastboot-ROM `12.0.18.0.QCDEUXM` für „dandelion“ (Redmi 9A, EEA) herunterladen und daraus die `boot.img` nehmen. Die Datei aufs Handy kopieren und in der **Magisk-App** mit Installieren → Datei patchen bearbeiten. Die gepatchte Datei zurück auf den PC kopieren, dann im Fastboot-Modus:
+   ```
+   fastboot flash boot magisk_patched-XXXX.img
+   fastboot reboot
+   ```
+4. **Auto-Boot beim Einstecken:** Den Ordner `handy-tools/` nach `/sdcard/phonedeck/` aufs Handy kopieren. Dann am PC:
+   ```
+   adb shell su -c sh /sdcard/phonedeck/autoboot_einrichten.sh
+   ```
+   Das Skript sichert die Boot-Partition nach `/sdcard/phonedeck/boot_backup.img`. **Kopier dieses Backup auf den PC.** Danach fügt es per Magisk `overlay.d` eine Regel ein: Startet das Handy im Lade-Modus, bootet es stattdessen normal.
+   Falls das Handy danach nicht mehr startet: im Fastboot-Modus `fastboot flash boot boot_backup.img` ausführen.
+5. **MIUI-Extras für die App:** In der App „Sicherheit“ → Autostart → PhoneDeck einschalten. Unter Einstellungen → Apps → PhoneDeck → Energiesparmodus „Keine Einschränkungen“ wählen. In der App-Übersicht PhoneDeck mit dem Schloss-Symbol sperren.
 
 ## Ablauf
 

@@ -1,0 +1,4 @@
+# Wird von Magisk (overlay.d) in init.rc eingefuegt.
+# Im Lade-Modus (Handy aus + Kabel rein) sofort normal hochfahren.
+on charger
+    setprop sys.powerctl reboot
