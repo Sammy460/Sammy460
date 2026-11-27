@@ -33,6 +33,80 @@ try:  # optional: fuer Tastenkombinationen, Media-Tasten und Text
 except Exception:  # noqa: BLE001
     keyboard = None
 
+try:  # optional: "Now Playing" von Windows (Spotify, Browser, ...)
+    import asyncio
+    import base64
+    from winsdk.windows.media.control import (  # type: ignore
+        GlobalSystemMediaTransportControlsSessionManager as _MediaManager,
+    )
+    from winsdk.windows.storage.streams import (  # type: ignore
+        DataReader as _DataReader,
+    )
+except Exception:  # noqa: BLE001
+    _MediaManager = None
+
+
+async def _now_playing_async():
+    mgr = await _MediaManager.request_async()
+    s = mgr.get_current_session()
+    if s is None:
+        return {"active": False}
+    props = await s.try_get_media_properties_async()
+    info = s.get_playback_info()
+    playing = False
+    try:
+        playing = int(info.playback_status) == 4  # 4 = Playing
+    except Exception:  # noqa: BLE001
+        pass
+    thumb = ""
+    try:
+        if props.thumbnail is not None:
+            stream = await props.thumbnail.open_read_async()
+            size = stream.size
+            reader = _DataReader(stream.get_input_stream_at(0))
+            await reader.load_async(size)
+            buf = bytearray(size)
+            reader.read_bytes(buf)
+            thumb = "data:image/jpeg;base64," + base64.b64encode(bytes(buf)).decode()
+    except Exception:  # noqa: BLE001
+        thumb = ""
+    return {
+        "active": True,
+        "title": props.title or "",
+        "artist": props.artist or "",
+        "playing": playing,
+        "thumb": thumb,
+    }
+
+
+def now_playing():
+    if _MediaManager is None:
+        return {"active": False}
+    try:
+        return asyncio.run(_now_playing_async())
+    except Exception:  # noqa: BLE001
+        return {"active": False}
+
+
+async def _media_cmd_async(cmd):
+    mgr = await _MediaManager.request_async()
+    s = mgr.get_current_session()
+    if s is None:
+        return False
+    if cmd == "next":
+        await s.try_skip_next_async()
+    elif cmd == "prev":
+        await s.try_skip_previous_async()
+    else:
+        await s.try_toggle_play_pause_async()
+    return True
+
+
+def media_cmd(cmd):
+    if _MediaManager is None:
+        raise RuntimeError("Windows-Medien nicht verfuegbar")
+    return asyncio.run(_media_cmd_async(cmd))
+
 
 def load_config():
     with open(CONFIG, encoding="utf-8") as f:
@@ -92,6 +166,8 @@ class Handler(BaseHTTPRequestHandler):
             self.send_file(WEB / "index.html", "text/html; charset=utf-8")
         elif self.path == "/api/ping":
             self.send_json({"ok": True})
+        elif self.path == "/api/nowplaying":
+            self.send_json(now_playing())
         elif self.path == "/api/deck":
             try:
                 cfg = load_config()
@@ -108,6 +184,14 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json({"error": "not found"}, 404)
 
     def do_POST(self):
+        if self.path.startswith("/api/media/"):
+            cmd = self.path.rsplit("/", 1)[1]
+            try:
+                media_cmd(cmd)
+                self.send_json({"ok": True})
+            except Exception as e:  # noqa: BLE001
+                self.send_json({"ok": False, "error": str(e)}, 500)
+            return
         if not self.path.startswith("/api/press/"):
             self.send_json({"error": "not found"}, 404)
             return

@@ -41,14 +41,14 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install pyinstaller keyboard
+      - run: pip install pyinstaller keyboard winsdk
       - uses: actions/download-artifact@v4
         with:
           name: PhoneDeck-apk
           path: apk
       - name: EXEs bauen
         run: |
-          pyinstaller --onefile --windowed --name PhoneDeck-Control --add-data "pc-server/web;web" --paths pc-server pc-control/phonedeck_control.py
+          pyinstaller --onefile --windowed --name PhoneDeck-Control --add-data "pc-server/web;web" --paths pc-server --collect-submodules winsdk pc-control/phonedeck_control.py
           pyinstaller --onefile --windowed --name PhoneDeck-Einrichtung setup-assistent/phonedeck_setup.py
           pyinstaller --onefile --noconsole --name PhoneDeck-Server --add-data "pc-server/web;web" pc-server/server.py
       - name: Paket packen

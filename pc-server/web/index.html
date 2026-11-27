@@ -8,7 +8,8 @@
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
   html, body { margin: 0; height: 100%; background: #0d0d0f; color: #fff;
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; overflow: hidden; }
-  #grid { display: grid; gap: 12px; padding: 12px; height: 100%; }
+  #app { display: flex; flex-direction: column; height: 100%; }
+  #grid { display: grid; gap: 12px; padding: 12px; flex: 1; min-height: 0; }
   .btn { border: 0; border-radius: 18px; color: #fff; display: flex; flex-direction: column;
     align-items: center; justify-content: center; gap: 6px; font-size: 15px; font-weight: 600;
     box-shadow: 0 4px 14px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.12);
@@ -16,6 +17,30 @@
   .btn .icon { font-size: clamp(28px, 7vmin, 64px); line-height: 1; }
   .btn:active, .btn.pressed { transform: scale(.94); filter: brightness(1.35); }
   .btn.err { outline: 3px solid #ff4d4d; }
+
+  /* Now-Playing-Leiste */
+  #np { display: none; align-items: center; gap: 14px; margin: 12px 12px 0;
+    padding: 10px 14px; border-radius: 20px; position: relative; overflow: hidden;
+    background: rgba(255,255,255,.06);
+    box-shadow: 0 6px 20px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.1); }
+  #np.show { display: flex; }
+  #np .bg { position: absolute; inset: 0; background-size: cover; background-position: center;
+    filter: blur(28px) brightness(.5); transform: scale(1.4); z-index: 0; }
+  #np > * { position: relative; z-index: 1; }
+  #np .art { width: 56px; height: 56px; border-radius: 12px; background: #222;
+    background-size: cover; background-position: center; flex: 0 0 auto;
+    box-shadow: 0 3px 10px rgba(0,0,0,.5); }
+  #np .meta { flex: 1; min-width: 0; }
+  #np .t { font-weight: 700; font-size: 15px; white-space: nowrap; overflow: hidden;
+    text-overflow: ellipsis; }
+  #np .a { font-size: 13px; color: #cfcfcf; white-space: nowrap; overflow: hidden;
+    text-overflow: ellipsis; }
+  #np .ctrl { display: flex; gap: 6px; flex: 0 0 auto; }
+  #np .ctrl button { width: 46px; height: 46px; border: 0; border-radius: 50%; color: #fff;
+    background: rgba(255,255,255,.14); font-size: 20px; display: flex; align-items: center;
+    justify-content: center; }
+  #np .ctrl button:active { transform: scale(.9); background: rgba(255,255,255,.28); }
+
   #offline { position: fixed; inset: 0; background: #0d0d0f; display: none;
     flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: #888; }
   #offline.show { display: flex; }
@@ -25,15 +50,30 @@
 </style>
 </head>
 <body>
-<div id="grid"></div>
+<div id="app">
+  <div id="np">
+    <div class="bg" id="npbg"></div>
+    <div class="art" id="npart"></div>
+    <div class="meta"><div class="t" id="npt">—</div><div class="a" id="npa"></div></div>
+    <div class="ctrl">
+      <button data-cmd="prev">⏮</button>
+      <button data-cmd="playpause" id="npplay">⏯</button>
+      <button data-cmd="next">⏭</button>
+    </div>
+  </div>
+  <div id="grid"></div>
+</div>
 <div id="offline"><div class="dot"></div><div>Warte auf PC …</div></div>
 <script>
   const grid = document.getElementById("grid");
   const offline = document.getElementById("offline");
+  const np = document.getElementById("np");
+  let showNp = false;
 
   async function loadDeck() {
     const deck = await (await fetch("/api/deck", { cache: "no-store" })).json();
     if (deck.error) { grid.textContent = deck.error; return; }
+    showNp = deck.nowPlaying !== false;   // Standard an, im Programm abschaltbar
     const cols = deck.columns || 4;
     const rows = Math.ceil(deck.buttons.length / cols) || 1;
     grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
@@ -61,7 +101,33 @@
     setTimeout(() => el.classList.remove("pressed", "err"), 600);
   }
 
-  // PC-Verbindung ueberwachen: offline -> Wartebildschirm, wieder da -> neu laden
+  // Now Playing
+  document.querySelectorAll("#np .ctrl button").forEach(b => {
+    b.addEventListener("click", async () => {
+      if (navigator.vibrate) navigator.vibrate(20);
+      try { await fetch(`/api/media/${b.dataset.cmd}`, { method: "POST" }); } catch {}
+      setTimeout(updateNp, 300);
+    });
+  });
+
+  async function updateNp() {
+    if (!showNp) { np.classList.remove("show"); return; }
+    let d;
+    try { d = await (await fetch("/api/nowplaying", { cache: "no-store" })).json(); }
+    catch { np.classList.remove("show"); return; }
+    if (!d.active || (!d.title && !d.artist)) { np.classList.remove("show"); return; }
+    np.classList.add("show");
+    document.getElementById("npt").textContent = d.title || "—";
+    document.getElementById("npa").textContent = d.artist || "";
+    document.getElementById("npplay").textContent = d.playing ? "⏸" : "▶";
+    const art = document.getElementById("npart");
+    const bg = document.getElementById("npbg");
+    if (d.thumb) { art.style.backgroundImage = `url(${d.thumb})`; bg.style.backgroundImage = `url(${d.thumb})`; }
+    else { art.style.backgroundImage = ""; bg.style.backgroundImage = ""; }
+  }
+  setInterval(updateNp, 2500);
+
+  // PC-Verbindung ueberwachen
   let wasOffline = false;
   setInterval(async () => {
     try {
@@ -75,6 +141,7 @@
   }, 2000);
 
   loadDeck();
+  updateNp();
 </script>
 </body>
 </html>
