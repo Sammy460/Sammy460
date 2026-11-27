@@ -59,6 +59,7 @@ jobs:
           Copy-Item apk/app-debug.apk "$d/PhoneDeck.apk"
           Copy-Item -Recurse handy-tools "$d/handy-tools"
           Copy-Item handy-tools/Auto-Boot-einrichten.bat $d
+          Copy-Item handy-tools/Entsperren-mtkclient.bat $d
           Copy-Item README.md "$d/LIESMICH.md"
           Compress-Archive -Path $d -DestinationPath PhoneDeck-Windows.zip
       - uses: actions/upload-artifact@v4
