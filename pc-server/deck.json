@@ -1,0 +1,20 @@
+{
+  "title": "PhoneDeck",
+  "columns": 4,
+  "buttons": [
+    { "label": "Discord",  "icon": "💬", "color": "#5865F2", "action": { "type": "url", "target": "discord://" } },
+    { "label": "Steam",    "icon": "🎮", "color": "#1b2838", "action": { "type": "url", "target": "steam://open/main" } },
+    { "label": "YouTube",  "icon": "▶️", "color": "#c4302b", "action": { "type": "url", "target": "https://youtube.com" } },
+    { "label": "Explorer", "icon": "📁", "color": "#d9a400", "action": { "type": "run", "command": "explorer" } },
+
+    { "label": "Play/Pause", "icon": "⏯️", "color": "#333", "action": { "type": "hotkey", "keys": "play/pause media" } },
+    { "label": "Zurück",     "icon": "⏮️", "color": "#333", "action": { "type": "hotkey", "keys": "previous track" } },
+    { "label": "Weiter",     "icon": "⏭️", "color": "#333", "action": { "type": "hotkey", "keys": "next track" } },
+    { "label": "Stumm",      "icon": "🔇", "color": "#333", "action": { "type": "hotkey", "keys": "volume mute" } },
+
+    { "label": "Leiser",     "icon": "🔉", "color": "#333", "action": { "type": "hotkey", "keys": "volume down" } },
+    { "label": "Lauter",     "icon": "🔊", "color": "#333", "action": { "type": "hotkey", "keys": "volume up" } },
+    { "label": "Screenshot", "icon": "📸", "color": "#2d6a4f", "action": { "type": "hotkey", "keys": "windows+shift+s" } },
+    { "label": "PC sperren", "icon": "🔒", "color": "#6a040f", "action": { "type": "run", "command": "rundll32.exe user32.dll,LockWorkStation" } }
+  ]
+}

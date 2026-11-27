@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>PhoneDeck</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
+  html, body { margin: 0; height: 100%; background: #0d0d0f; color: #fff;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; overflow: hidden; }
+  #grid { display: grid; gap: 12px; padding: 12px; height: 100%; }
+  .btn { border: 0; border-radius: 18px; color: #fff; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 6px; font-size: 15px; font-weight: 600;
+    box-shadow: 0 4px 14px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.12);
+    transition: transform .08s, filter .08s; min-height: 0; }
+  .btn .icon { font-size: clamp(28px, 7vmin, 64px); line-height: 1; }
+  .btn:active, .btn.pressed { transform: scale(.94); filter: brightness(1.35); }
+  .btn.err { outline: 3px solid #ff4d4d; }
+  #offline { position: fixed; inset: 0; background: #0d0d0f; display: none;
+    flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: #888; }
+  #offline.show { display: flex; }
+  #offline .dot { width: 14px; height: 14px; border-radius: 50%; background: #444;
+    animation: pulse 1.4s infinite; }
+  @keyframes pulse { 50% { background: #888; } }
+</style>
+</head>
+<body>
+<div id="grid"></div>
+<div id="offline"><div class="dot"></div><div>Warte auf PC …</div></div>
+<script>
+  const grid = document.getElementById("grid");
+  const offline = document.getElementById("offline");
+
+  async function loadDeck() {
+    const deck = await (await fetch("/api/deck", { cache: "no-store" })).json();
+    if (deck.error) { grid.textContent = deck.error; return; }
+    const cols = deck.columns || 4;
+    const rows = Math.ceil(deck.buttons.length / cols) || 1;
+    grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+    grid.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+    grid.innerHTML = "";
+    deck.buttons.forEach((b, i) => {
+      const el = document.createElement("button");
+      el.className = "btn";
+      el.style.background = b.color || "#333";
+      el.innerHTML = `<span class="icon"></span><span class="label"></span>`;
+      el.querySelector(".icon").textContent = b.icon || "";
+      el.querySelector(".label").textContent = b.label || "";
+      el.addEventListener("click", () => press(i, el));
+      grid.appendChild(el);
+    });
+  }
+
+  async function press(i, el) {
+    el.classList.add("pressed");
+    if (navigator.vibrate) navigator.vibrate(25);
+    try {
+      const r = await fetch(`/api/press/${i}`, { method: "POST" });
+      el.classList.toggle("err", !r.ok);
+    } catch { el.classList.add("err"); }
+    setTimeout(() => el.classList.remove("pressed", "err"), 600);
+  }
+
+  // PC-Verbindung ueberwachen: offline -> Wartebildschirm, wieder da -> neu laden
+  let wasOffline = false;
+  setInterval(async () => {
+    try {
+      const r = await fetch("/api/ping", { cache: "no-store" });
+      if (!r.ok) throw 0;
+      if (wasOffline) location.reload();
+    } catch {
+      wasOffline = true;
+      offline.classList.add("show");
+    }
+  }, 2000);
+
+  loadDeck();
+</script>
+</body>
+</html>
