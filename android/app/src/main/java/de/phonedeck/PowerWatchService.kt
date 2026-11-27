@@ -27,7 +27,10 @@ class PowerWatchService : Service() {
     private val shutdownTask = Runnable {
         if (!Prefs.isPluggedIn(this) && Prefs.shutdownEnabled(this)) {
             notify("Schalte aus …")
-            if (!Root.shutdown()) notify("Ausschalten fehlgeschlagen – kein Root?")
+            if (!Root.shutdown()) {
+                notify("Kein Root – Standby statt Ausschalten")
+                AdminReceiver.screenOff(this)
+            }
         }
     }
 
@@ -47,7 +50,9 @@ class PowerWatchService : Service() {
             notify("PC getrennt – schalte in $sec s aus")
             handler.postDelayed(shutdownTask, sec * 1000L)
         } else {
-            notify("PC getrennt")
+            // Standby-Modus (ohne Root): Bildschirm sofort aus
+            notify("PC getrennt – Standby")
+            AdminReceiver.screenOff(this)
         }
     }
 

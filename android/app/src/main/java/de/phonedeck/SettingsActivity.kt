@@ -42,7 +42,7 @@ class SettingsActivity : Activity() {
         col.addView(port)
 
         val shutdown = CheckBox(this).apply {
-            text = "Handy ausschalten, wenn PC-Strom weg ist (braucht Root)"
+            text = "Komplett ausschalten statt Standby (braucht Root)"
             isChecked = Prefs.shutdownEnabled(this@SettingsActivity)
         }
         col.addView(shutdown)
@@ -69,6 +69,15 @@ class SettingsActivity : Activity() {
         }
 
         label("Einrichtung (einmalig):")
+        button("0. Standby erlauben (Bildschirm sofort aus, ohne Root)") {
+            if (AdminReceiver.isActive(this)) toast("Schon erledigt ✅")
+            else startActivity(
+                Intent(android.app.admin.DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN)
+                    .putExtra(android.app.admin.DevicePolicyManager.EXTRA_DEVICE_ADMIN, AdminReceiver.component(this))
+                    .putExtra(android.app.admin.DevicePolicyManager.EXTRA_ADD_EXPLANATION,
+                        "Damit PhoneDeck den Bildschirm ausschalten kann, wenn der PC aus ist.")
+            )
+        }
         button("1. Root testen") {
             Thread {
                 val ok = Root.available()

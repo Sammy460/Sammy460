@@ -325,6 +325,7 @@ def step_app():
     shell(f"appops set {PKG} SYSTEM_ALERT_WINDOW allow")
     shell(f"dumpsys deviceidle whitelist +{PKG}")
     shell(f"cmd package set-home-activity {PKG}/.MainActivity")
+    shell(f"dpm set-active-admin {PKG}/.AdminReceiver")  # Standby: Bildschirm sofort aus
     ip = pc_ip()
     log(f"PC-IP: {ip}")
     shell(f"am start -n {PKG}/.MainActivity --es host {ip} --ei port 8765 "
@@ -332,7 +333,7 @@ def step_app():
     if root_ok:
         grant_root_to_app()
     else:
-        log("Kein Root: Ausschalten bei PC-aus ist deaktiviert.")
+        log("Kein Root: Standby-Modus – PC aus = Bildschirm aus, PC an = Deck sofort da.")
     shell("am start -n com.miui.securitycenter/com.miui.permcenter.autostart.AutoStartManagementActivity")
     info("MIUI", "Am Handy ist die Autostart-Liste offen:\n'PhoneDeck' einschalten.\n\n"
                  "Ausserdem: Einstellungen → Apps → PhoneDeck → Energiesparmodus →\n"
