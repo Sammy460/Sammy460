@@ -4,60 +4,73 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
-import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
 import android.content.pm.ServiceInfo
 import android.os.Build
-import android.os.Handler
 import android.os.IBinder
-import android.os.Looper
 import android.os.PowerManager
+import java.net.HttpURLConnection
+import java.net.URL
+import kotlin.concurrent.thread
 
 /**
- * Laeuft dauerhaft im Hintergrund.
- * - USB-Strom weg (PC aus)  -> nach Wartezeit Handy ausschalten (Root)
- * - USB-Strom wieder da     -> Ausschalten abbrechen, Bildschirm an, Deck oeffnen
+ * Laeuft dauerhaft im Hintergrund und fragt den PC-Server regelmaessig ab.
+ * - Server erreichbar (PC an)   -> Bildschirm an, Deck nach vorne.
+ * - Server weg (PC aus)         -> nach Wartezeit Bildschirm aus (Standby),
+ *                                  mit Root stattdessen ganz ausschalten.
+ * Funktioniert ueber WLAN und ueber Kabel (adb reverse auf 127.0.0.1).
  */
 class PowerWatchService : Service() {
 
-    private val handler = Handler(Looper.getMainLooper())
+    @Volatile private var running = true
+    @Volatile private var online = true
+    private var offSince = 0L
 
-    private val shutdownTask = Runnable {
-        if (!Prefs.isPluggedIn(this) && Prefs.shutdownEnabled(this)) {
-            notify("Schalte aus …")
-            if (!Root.shutdown()) {
-                notify("Kein Root – Standby statt Ausschalten")
-                AdminReceiver.screenOff(this)
+    private fun pingOk(): Boolean = try {
+        val c = URL(Prefs.url(this) + "api/ping").openConnection() as HttpURLConnection
+        c.connectTimeout = 1500
+        c.readTimeout = 1500
+        c.requestMethod = "GET"
+        val ok = c.responseCode == 200
+        c.disconnect()
+        ok
+    } catch (_: Exception) {
+        false
+    }
+
+    private fun loop() {
+        while (running) {
+            if (Prefs.host(this).isEmpty()) {
+                Thread.sleep(2000); continue
             }
-        }
-    }
-
-    private val receiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) {
-            when (intent.action) {
-                Intent.ACTION_POWER_DISCONNECTED -> onUnplugged()
-                Intent.ACTION_POWER_CONNECTED -> onPluggedIn()
+            val ok = pingOk()
+            when {
+                ok && !online -> onBackOnline()
+                !ok && online -> {
+                    if (offSince == 0L) offSince = System.currentTimeMillis()
+                    val delayMs = Prefs.shutdownDelaySec(this) * 1000L
+                    if (System.currentTimeMillis() - offSince >= delayMs) onGoneOffline()
+                }
             }
+            Thread.sleep(2000)
         }
     }
 
-    private fun onUnplugged() {
-        handler.removeCallbacks(shutdownTask)
-        if (Prefs.shutdownEnabled(this)) {
-            val sec = Prefs.shutdownDelaySec(this)
-            notify("PC getrennt – schalte in $sec s aus")
-            handler.postDelayed(shutdownTask, sec * 1000L)
-        } else {
-            // Standby-Modus (ohne Root): Bildschirm sofort aus
-            notify("PC getrennt – Standby")
-            AdminReceiver.screenOff(this)
+    private fun onGoneOffline() {
+        online = false
+        offSince = 0L
+        if (Prefs.shutdownEnabled(this) && Root.shutdown()) {
+            notify("PC aus – Handy wird ausgeschaltet")
+            return
         }
+        notify("PC aus – Standby")
+        AdminReceiver.screenOff(this)
     }
 
-    private fun onPluggedIn() {
-        handler.removeCallbacks(shutdownTask)
+    private fun onBackOnline() {
+        online = true
+        offSince = 0L
         notify("Mit PC verbunden")
         wakeScreen()
         try {
@@ -87,25 +100,19 @@ class PowerWatchService : Service() {
                 NotificationChannel(CHANNEL, "PhoneDeck", NotificationManager.IMPORTANCE_LOW)
             )
         }
-        val n = build(if (Prefs.isPluggedIn(this)) "Mit PC verbunden" else "PC getrennt")
+        val n = build("PhoneDeck laeuft")
         if (Build.VERSION.SDK_INT >= 34) {
             startForeground(NOTIF_ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
         } else {
             startForeground(NOTIF_ID, n)
         }
-        registerReceiver(receiver, IntentFilter().apply {
-            addAction(Intent.ACTION_POWER_CONNECTED)
-            addAction(Intent.ACTION_POWER_DISCONNECTED)
-        })
-        // Bewusst KEIN Ausschalten, wenn ohne Strom gestartet:
-        // so kann man das Handy jederzeit von Hand einschalten und einstellen.
+        thread(isDaemon = true) { loop() }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int) = START_STICKY
 
     override fun onDestroy() {
-        handler.removeCallbacks(shutdownTask)
-        unregisterReceiver(receiver)
+        running = false
         super.onDestroy()
     }
 

@@ -48,6 +48,7 @@ jobs:
           path: apk
       - name: EXEs bauen
         run: |
+          pyinstaller --onefile --windowed --name PhoneDeck-Control --add-data "pc-server/web;web" --paths pc-server pc-control/phonedeck_control.py
           pyinstaller --onefile --windowed --name PhoneDeck-Einrichtung setup-assistent/phonedeck_setup.py
           pyinstaller --onefile --noconsole --name PhoneDeck-Server --add-data "pc-server/web;web" pc-server/server.py
       - name: Paket packen
@@ -55,7 +56,7 @@ jobs:
         run: |
           $d = "PhoneDeck"
           New-Item -ItemType Directory $d | Out-Null
-          Copy-Item dist/PhoneDeck-Einrichtung.exe, dist/PhoneDeck-Server.exe, pc-server/deck.json $d
+          Copy-Item dist/PhoneDeck-Control.exe, dist/PhoneDeck-Einrichtung.exe, dist/PhoneDeck-Server.exe, pc-server/deck.json $d
           Copy-Item apk/app-debug.apk "$d/PhoneDeck.apk"
           Copy-Item -Recurse handy-tools "$d/handy-tools"
           Copy-Item handy-tools/Auto-Boot-einrichten.bat $d
@@ -74,4 +75,5 @@ jobs:
           files: |
             PhoneDeck-Windows.zip
             PhoneDeck/PhoneDeck.apk
+            PhoneDeck/PhoneDeck-Control.exe
             PhoneDeck/PhoneDeck-Server.exe
