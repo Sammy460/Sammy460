@@ -9,7 +9,18 @@ Das Handy hängt per USB am PC und zeigt große Buttons (Apps starten, Media-Tas
 pc-server/   Python-Server für den PC (Buttons in deck.json)
 android/     Android-App (Kiosk-Vollbild, Strom-Wächter, Autostart)
 handy-tools/ Skripte fuer Auto-Boot beim Einstecken (Root/Magisk)
+setup-assistent/ Einrichtungs-Programm für Windows
 ```
+
+## Schnellstart: Einrichtungs-Programm
+
+1. Auf GitHub unter **Releases** → „PhoneDeck (neueste Version)“ die Datei `PhoneDeck-Windows.zip` laden und entpacken.
+2. `PhoneDeck-Einrichtung.exe` starten. Die Schritte 1–7 der Reihe nach anklicken.
+3. Buttons änderst du in `deck.json` im selben Ordner.
+
+Windows warnt beim ersten Start eventuell („Unbekannter Herausgeber“). Klick dann auf „Weitere Informationen“ → „Trotzdem ausführen“.
+
+Die Abschnitte unten beschreiben dasselbe von Hand.
 
 ## 1. PC (Windows)
 

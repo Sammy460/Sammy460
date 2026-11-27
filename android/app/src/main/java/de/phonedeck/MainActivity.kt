@@ -83,10 +83,28 @@ class MainActivity : Activity() {
             ))
         })
 
+        applyExtras(intent)
         PowerWatchService.start(this)
         if (Prefs.host(this).isEmpty()) {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        applyExtras(intent)
+    }
+
+    /** Einstellungen per ADB vom Einrichtungs-Assistenten:
+     *  am start -n de.phonedeck/.MainActivity --es host IP --ei port 8765 --ez shutdown true */
+    private fun applyExtras(i: Intent?) {
+        val host = i?.getStringExtra("host") ?: return
+        Prefs.save(
+            this, host,
+            i.getIntExtra("port", Prefs.port(this)),
+            i.getBooleanExtra("shutdown", Prefs.shutdownEnabled(this)),
+            i.getIntExtra("delay", Prefs.shutdownDelaySec(this))
+        )
     }
 
     override fun onResume() {

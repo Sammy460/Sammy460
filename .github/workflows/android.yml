@@ -1,14 +1,20 @@
-name: Android APK bauen
+name: PhoneDeck bauen
 
 on:
   push:
     paths:
       - "android/**"
+      - "pc-server/**"
+      - "setup-assistent/**"
+      - "handy-tools/**"
       - ".github/workflows/android.yml"
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
-  build:
+  apk:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -26,3 +32,41 @@ jobs:
         with:
           name: PhoneDeck-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
+
+  windows:
+    needs: apk
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pyinstaller keyboard
+      - uses: actions/download-artifact@v4
+        with:
+          name: PhoneDeck-apk
+          path: apk
+      - name: EXEs bauen
+        run: |
+          pyinstaller --onefile --windowed --name PhoneDeck-Einrichtung setup-assistent/phonedeck_setup.py
+          pyinstaller --onefile --noconsole --name PhoneDeck-Server --add-data "pc-server/web;web" pc-server/server.py
+      - name: Paket packen
+        shell: pwsh
+        run: |
+          $d = "PhoneDeck"
+          New-Item -ItemType Directory $d | Out-Null
+          Copy-Item dist/PhoneDeck-Einrichtung.exe, dist/PhoneDeck-Server.exe, pc-server/deck.json $d
+          Copy-Item apk/app-debug.apk "$d/PhoneDeck.apk"
+          Copy-Item -Recurse handy-tools "$d/handy-tools"
+          Copy-Item README.md "$d/LIESMICH.md"
+          Compress-Archive -Path $d -DestinationPath PhoneDeck-Windows.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PhoneDeck-Windows
+          path: PhoneDeck-Windows.zip
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: phonedeck-latest
+          name: PhoneDeck (neueste Version)
+          target_commitish: ${{ github.sha }}
+          files: PhoneDeck-Windows.zip

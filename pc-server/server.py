@@ -16,10 +16,17 @@ import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-BASE = Path(__file__).resolve().parent
+if getattr(sys, "frozen", False):  # als EXE (PyInstaller)
+    BASE = Path(sys.executable).resolve().parent
+    WEB = Path(getattr(sys, "_MEIPASS", BASE)) / "web"
+else:
+    BASE = Path(__file__).resolve().parent
+    WEB = BASE / "web"
 CONFIG = BASE / "deck.json"
-WEB = BASE / "web"
 PORT = int(os.environ.get("PHONEDECK_PORT", "8765"))
+
+if sys.stdout is None:  # EXE ohne Konsole
+    sys.stdout = sys.stderr = open(os.devnull, "w")
 
 try:  # optional: fuer Tastenkombinationen, Media-Tasten und Text
     import keyboard  # type: ignore
