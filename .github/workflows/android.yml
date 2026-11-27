@@ -70,4 +70,7 @@ jobs:
           tag_name: phonedeck-latest
           name: PhoneDeck (neueste Version)
           target_commitish: ${{ github.sha }}
-          files: PhoneDeck-Windows.zip
+          files: |
+            PhoneDeck-Windows.zip
+            PhoneDeck/PhoneDeck.apk
+            PhoneDeck/PhoneDeck-Server.exe
