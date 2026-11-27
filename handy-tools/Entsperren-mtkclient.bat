@@ -26,11 +26,16 @@ choice /c JN /m "Wirklich fortfahren"
 if errorlevel 2 exit /b 0
 
 echo.
-echo [1/4] mtkclient installieren/aktualisieren ...
-"%PY%" -m pip install --upgrade mtkclient >nul 2>&1
+echo [1/4] mtkclient installieren (von GitHub, braucht Git) ...
+where git >nul 2>&1
+if errorlevel 1 (
+  echo Git fehlt. Installieren: https://git-scm.com/download/win
+  pause & exit /b 1
+)
+"%PY%" -m pip install --upgrade "git+https://github.com/bkerler/mtkclient"
 "%PY%" -m mtkclient.mtk --help >nul 2>&1
 if errorlevel 1 (
-  echo mtkclient-Installation fehlgeschlagen. Internet pruefen.
+  echo mtkclient-Installation fehlgeschlagen. Fehler oben lesen.
   pause & exit /b 1
 )
 
